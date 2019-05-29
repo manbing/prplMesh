@@ -28,9 +28,4 @@ sM2:
   vendor_extensions_attr: WSC::sWscAttrVersionExtension
 
   #encrypted data
-  ssid_attr: WSC::sWscAttrSsid
-  authentication_type_attr: WSC::sWscAttrAuthenticationType
-  encryption_type_attr: WSC::sWscAttrEncryptionType
-  network_key_attr: WSC::sWscAttrNetworkKey
-  bssid_attr: WSC::sWscAttrBssid
-  key_wrap_auth_attr: WSC::sWscAttrKeyWrapAuthenticator
+  encrypted_settings_attr: sWscAttrEncryptedSettings
