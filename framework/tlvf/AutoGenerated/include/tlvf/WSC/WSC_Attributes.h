@@ -482,6 +482,41 @@ typedef struct sWscAttrBssid {
     }
 } sWscAttrBssid;
 
+typedef struct sWscAttrEncryptedSettings {
+    eWscAttributes attribute_type;
+    //TODO the value of the data_length should be updated automatically
+    //based on the inner tlvs attributes lengths.
+    //This will be added after implementing the support in multiple dynamic lists.
+    //This attribute's type will be changed into class (instead of struct) and that way 
+    //it can contain _length_var that will be updated automatically.
+    uint16_t data_length;
+    sWscAttrSsid ssid_attr;
+    sWscAttrAuthenticationType authentication_type_attr;
+    sWscAttrEncryptionType encryption_type_attr;
+    sWscAttrNetworkKey network_key_attr;
+    sWscAttrBssid bssid_attr;
+    sWscAttrKeyWrapAuthenticator key_wrap_auth_attr;
+    void struct_swap(){
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&attribute_type));
+        tlvf_swap(16, reinterpret_cast<uint8_t*>(&data_length));
+        ssid_attr.struct_swap();
+        authentication_type_attr.struct_swap();
+        encryption_type_attr.struct_swap();
+        network_key_attr.struct_swap();
+        bssid_attr.struct_swap();
+        key_wrap_auth_attr.struct_swap();
+    }
+    void struct_init(){
+        attribute_type = ATTR_ENCR_SETTINGS;
+        ssid_attr.struct_init();
+        authentication_type_attr.struct_init();
+        encryption_type_attr.struct_init();
+        network_key_attr.struct_init();
+        bssid_attr.struct_init();
+        key_wrap_auth_attr.struct_init();
+    }
+} sWscAttrEncryptedSettings;
+
 
 }; // close namespace: WSC
 

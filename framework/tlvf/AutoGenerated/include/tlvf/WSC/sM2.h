@@ -42,12 +42,7 @@ typedef struct sM2 {
     WSC::sWscAttrDevicePasswordID device_password_id_attr;
     WSC::sWscAttrOsVersion os_version_attr;
     WSC::sWscAttrVersionExtension vendor_extensions_attr;
-    WSC::sWscAttrSsid ssid_attr;
-    WSC::sWscAttrAuthenticationType authentication_type_attr;
-    WSC::sWscAttrEncryptionType encryption_type_attr;
-    WSC::sWscAttrNetworkKey network_key_attr;
-    WSC::sWscAttrBssid bssid_attr;
-    WSC::sWscAttrKeyWrapAuthenticator key_wrap_auth_attr;
+    sWscAttrEncryptedSettings encrypted_settings_attr;
     void struct_swap(){
         version_attr.struct_swap();
         message_type_attr.struct_swap();
@@ -70,12 +65,7 @@ typedef struct sM2 {
         device_password_id_attr.struct_swap();
         os_version_attr.struct_swap();
         vendor_extensions_attr.struct_swap();
-        ssid_attr.struct_swap();
-        authentication_type_attr.struct_swap();
-        encryption_type_attr.struct_swap();
-        network_key_attr.struct_swap();
-        bssid_attr.struct_swap();
-        key_wrap_auth_attr.struct_swap();
+        encrypted_settings_attr.struct_swap();
     }
     void struct_init(){
         version_attr.struct_init();
@@ -99,12 +89,7 @@ typedef struct sM2 {
         device_password_id_attr.struct_init();
         os_version_attr.struct_init();
         vendor_extensions_attr.struct_init();
-        ssid_attr.struct_init();
-        authentication_type_attr.struct_init();
-        encryption_type_attr.struct_init();
-        network_key_attr.struct_init();
-        bssid_attr.struct_init();
-        key_wrap_auth_attr.struct_init();
+        encrypted_settings_attr.struct_init();
     }
 } sM2;
 
