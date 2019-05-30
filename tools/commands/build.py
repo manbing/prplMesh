@@ -65,8 +65,6 @@ class cmakebuilder(builder):
                "-B" + self.build_path,
                "-DBUILD_SHARED_LIBS=ON",
                "-DCMAKE_INSTALL_PREFIX=" + self.install_path]
-        if not self.native_build:
-            cmd.append("-DCMAKE_TOOLCHAIN_FILE=external_toolchain.cmake")
         cmd.extend(['-D%s' %f for f in self.cmake_flags])
         if self.cmake_verbose:
             cmd.append("--debug_output")
@@ -88,10 +86,8 @@ class cmakebuilder(builder):
         subprocess.check_call(cmd, env=self.env)
 
 class acbuilder(builder):
-    def __init__(self, name, modules_dir, build_dir, install_dir, host_prefix, make_verbose=False):
+    def __init__(self, name, modules_dir, build_dir, install_dir, make_verbose=False):
         self.make_verbose = make_verbose
-        self.host_prefix = host_prefix
-
         super(acbuilder, self).__init__(name, modules_dir, build_dir, install_dir)
 
     def clean(self):
@@ -112,8 +108,6 @@ class acbuilder(builder):
         os.chdir(self.build_path)
         cmd = [self.src_path + "/configure",
                "--prefix=" + self.install_path]
-        if self.host_prefix:
-            cmd.append("--host=" + self.host_prefix)
         logger.info("configuring {}: {}".format(self.name, " ".join(cmd)))
         subprocess.check_call(cmd, env=self.env)
 
@@ -146,8 +140,7 @@ class mapbuild(object):
                         args.native, args.cmake_verbose, args.make_verbose, args.cmake_flags, args.generator)
 
             if name == 'safeclib':
-                builder = acbuilder('safeclib', modules_dir, build_dir, install_dir,
-                        args.host_prefix, args.make_verbose)
+                builder = acbuilder('safeclib', modules_dir, build_dir, install_dir, args.make_verbose)
 
             self.run_command(builder, commands)
 
@@ -155,9 +148,12 @@ class mapbuild(object):
         modules_dir = os.path.realpath(args.map_path)
         build_dir = os.path.realpath(modules_dir + '/build')
         install_dir = os.path.realpath(build_dir + '/install')
+
+        map_cmake_flags = ["STANDALONE=ON"] + args.cmake_flags
+        if not args.native: map_cmake_flags += ["CMAKE_TOOLCHAIN_FILE=external_toolchain.cmake"]
         for name in _map_modules:
             builder = cmakebuilder(name, modules_dir, build_dir, install_dir,
-                args.native, args.cmake_verbose, args.make_verbose, args.cmake_flags, args.generator)
+                args.native, args.cmake_verbose, args.make_verbose, map_cmake_flags, args.generator)
 
             self.run_command(builder, commands)
 
@@ -180,7 +176,6 @@ class mapbuild(object):
         parser.add_argument('-c', '--commands', choices=build_targets, nargs='+', default=['make'], help="build command (default is clean+make)")
         parser.add_argument("--verbose", "-v", action="store_true", help="verbosity on")
         parser.add_argument("--native", "-n", action="store_true", help="Build native (not cross compile - ignore external_toolchain.cfg)")
-        parser.add_argument("--host-prefix", "-H", help="cross-compile to build programs to run on HOST (only for building safeclib)")
         parser.add_argument('-f', '--cmake-flags', nargs='+', default=[], help="extra cmake flags")
         parser.add_argument("--cmake-verbose", action="store_true", help="cmake verbosity on (pass --debug-output to cmake command)")
         parser.add_argument("--make-verbose", action="store_true", help="make verbosity on (pass VERBOSE=1 to make)")
