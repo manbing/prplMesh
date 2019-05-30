@@ -33,12 +33,14 @@ class builder(object):
 
     def distclean(self):
         self.clean()
+        if os.path.exists(self.install_path):
+            shutil.rmtree(self.install_path)
 
     def prepare(self):
         raise NotImplementedError('prepare() function must be overrided')
 
     def make(self):
-        raise NotImplementedError('prepare() function must be overrided')
+        raise NotImplementedError('make() function must be overrided')
 
 class cmakebuilder(builder):
     def __init__(self, name, modules_dir, build_dir, install_dir, native_build=False, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
