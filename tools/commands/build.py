@@ -35,10 +35,10 @@ class builder(object):
         self.clean()
 
     def prepare(self):
-        pass
+        raise NotImplementedError('prepare() function must be overrided')
 
     def make(self):
-        pass
+        raise NotImplementedError('prepare() function must be overrided')
 
 class cmakebuilder(builder):
     def __init__(self, name, modules_dir, build_dir, install_dir, native_build=False, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
@@ -63,7 +63,7 @@ class cmakebuilder(builder):
         cmd = ["cmake",
                "-H" + self.src_path,
                "-B" + self.build_path,
-               "-DSTANDALONE=ON",
+               "-DBUILD_SHARED_LIBS=ON",
                "-DCMAKE_INSTALL_PREFIX=" + self.install_path]
         if not self.native_build:
             cmd.append("-DCMAKE_TOOLCHAIN_FILE=external_toolchain.cmake")
@@ -137,44 +137,41 @@ class mapbuild(object):
         logger.info("{} {}".format(commands, _map_modules + _dep_modules))
 
         # build dep modules
+        modules_dir = os.path.join(os.path.realpath(args.map_path), "../3rdparty")
+        build_dir = os.path.realpath(modules_dir + '/../multiap/build')
+        install_dir = os.path.realpath(build_dir + '/install')
         for name in _dep_modules:
-            modules_dir = os.path.join(os.path.realpath(args.map_path), "../3rdparty")
-            build_dir = os.path.realpath(modules_dir + '/../multiap/build')
-            install_dir = os.path.realpath(build_dir + '/install')
-
             if name == 'nng':
-                args.cmake_flags.append("BUILD_SHARED_LIBS=yes")
-                self.builder = cmakebuilder('nng', modules_dir, build_dir, install_dir,
+                builder = cmakebuilder('nng', modules_dir, build_dir, install_dir,
                         args.native, args.cmake_verbose, args.make_verbose, args.cmake_flags, args.generator)
 
             if name == 'safeclib':
-                self.builder = acbuilder('safeclib', modules_dir, build_dir, install_dir,
+                builder = acbuilder('safeclib', modules_dir, build_dir, install_dir,
                         args.host_prefix, args.make_verbose)
 
-            self.run_command(commands)
+            self.run_command(builder, commands)
 
         # build map modules
+        modules_dir = os.path.realpath(args.map_path)
+        build_dir = os.path.realpath(modules_dir + '/build')
+        install_dir = os.path.realpath(build_dir + '/install')
         for name in _map_modules:
-            modules_dir = os.path.realpath(args.map_path)
-            build_dir = os.path.realpath(modules_dir + '/build')
-            install_dir = os.path.realpath(build_dir + '/install')
-
-            self.builder = cmakebuilder(name, modules_dir, build_dir, install_dir,
+            builder = cmakebuilder(name, modules_dir, build_dir, install_dir,
                 args.native, args.cmake_verbose, args.make_verbose, args.cmake_flags, args.generator)
 
-            self.run_command(commands)
+            self.run_command(builder, commands)
 
-    def run_command(self, commands):
-        logger.debug(self.builder)
+    def run_command(self, builder, commands):
+        logger.debug(builder)
         if 'distclean' in commands:
-            self.builder.distclean()
+            builder.distclean()
         if 'clean' in commands:
-            self.builder.clean()
+            builder.clean()
         if 'prepare' in commands:
-            self.builder.prepare()
+            builder.prepare()
         if 'make' in commands:
-            self.builder.prepare()
-            self.builder.make()
+            builder.prepare()
+            builder.make()
 
     @staticmethod
     def configure_parser(parser=argparse.ArgumentParser(prog='build')):
