@@ -10,10 +10,13 @@ import multiprocessing
 logger = logging.getLogger("build")
 build_targets=['prepare', 'clean', 'distclean', 'make']
 map_modules=['framework', 'common', 'controller', 'agent']
-dep_modules=['nng', 'safeclib']
+dep_modules=['nng', 'safeclib', 'dwpal']
 
 class builder(object):
-    def __init__(self, name, modules_dir, build_dir, install_dir):
+    def __init__(self, name, modules_dir):
+        build_dir = os.path.realpath(modules_dir + '/../build')
+        install_dir = os.path.realpath(build_dir + '/install')
+
         logger.debug("modules_dir={}, build_dir={}, install_dir={}".format(modules_dir, build_dir, install_dir))
 
         self.name = name
@@ -43,14 +46,14 @@ class builder(object):
         raise NotImplementedError('make() function must be overrided')
 
 class cmakebuilder(builder):
-    def __init__(self, name, modules_dir, build_dir, install_dir, native_build=False, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
+    def __init__(self, name, modules_dir, native_build=False, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
         self.native_build = native_build
         self.cmake_verbose = cmake_verbose
         self.make_verbose = make_verbose
         self.cmake_flags = cmake_flags
         self.generator = generator
 
-        super(cmakebuilder, self).__init__(name, modules_dir, build_dir, install_dir)
+        super(cmakebuilder, self).__init__(name, modules_dir)
 
     def clean(self):
         if os.path.exists(self.build_path):
@@ -88,9 +91,9 @@ class cmakebuilder(builder):
         subprocess.check_call(cmd, env=self.env)
 
 class acbuilder(builder):
-    def __init__(self, name, modules_dir, build_dir, install_dir, make_verbose=False):
+    def __init__(self, name, modules_dir, make_verbose=False):
         self.make_verbose = make_verbose
-        super(acbuilder, self).__init__(name, modules_dir, build_dir, install_dir)
+        super(acbuilder, self).__init__(name, modules_dir)
 
     def clean(self):
         if os.path.exists(self.build_path):
@@ -134,28 +137,27 @@ class mapbuild(object):
 
         # build dep modules
         modules_dir = os.path.join(os.path.realpath(args.map_path), "../3rdparty")
-        build_dir = os.path.realpath(modules_dir + '/../multiap/build')
-        install_dir = os.path.realpath(build_dir + '/install')
         for name in _dep_modules:
-            if name == 'nng':
-                builder = cmakebuilder('nng', modules_dir, build_dir, install_dir,
-                        args.native, args.cmake_verbose, args.make_verbose, args.cmake_flags, args.generator)
+            if name == 'nng' or name == 'dwpal':
+                if name == 'dwpal':
+                    modules_dir = os.path.join(os.path.realpath(args.map_path), "../hostap")
+
+                builder = cmakebuilder(name, modules_dir, args.native, args.cmake_verbose,
+                    args.make_verbose, args.cmake_flags, args.generator)
 
             if name == 'safeclib':
-                builder = acbuilder('safeclib', modules_dir, build_dir, install_dir, args.make_verbose)
+                builder = acbuilder('safeclib', modules_dir, args.make_verbose)
 
             self.run_command(builder, commands)
 
         # build map modules
         modules_dir = os.path.realpath(args.map_path)
-        build_dir = os.path.realpath(modules_dir + '/build')
-        install_dir = os.path.realpath(build_dir + '/install')
 
         map_cmake_flags = ["STANDALONE=ON"] + args.cmake_flags
         if not args.native: map_cmake_flags += ["CMAKE_TOOLCHAIN_FILE=external_toolchain.cmake"]
         for name in _map_modules:
-            builder = cmakebuilder(name, modules_dir, build_dir, install_dir,
-                args.native, args.cmake_verbose, args.make_verbose, map_cmake_flags, args.generator)
+            builder = cmakebuilder(name, modules_dir, args.native, args.cmake_verbose,
+                args.make_verbose, map_cmake_flags, args.generator)
 
             self.run_command(builder, commands)
 
