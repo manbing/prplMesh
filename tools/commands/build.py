@@ -13,10 +13,7 @@ map_modules=['framework', 'common', 'controller', 'agent']
 dep_modules=['nng', 'safeclib', 'dwpal']
 
 class builder(object):
-    def __init__(self, name, modules_dir):
-        build_dir = os.path.realpath(modules_dir + '/../build')
-        install_dir = os.path.realpath(build_dir + '/install')
-
+    def __init__(self, name, modules_dir, build_dir, install_dir):
         logger.debug("modules_dir={}, build_dir={}, install_dir={}".format(modules_dir, build_dir, install_dir))
 
         self.name = name
@@ -46,14 +43,13 @@ class builder(object):
         raise NotImplementedError('make() function must be overrided')
 
 class cmakebuilder(builder):
-    def __init__(self, name, modules_dir, native_build=False, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
-        self.native_build = native_build
+    def __init__(self, name, modules_dir, build_dir, install_dir, cmake_verbose=False, make_verbose=False, cmake_flags=[], generator=None):
         self.cmake_verbose = cmake_verbose
         self.make_verbose = make_verbose
         self.cmake_flags = cmake_flags
         self.generator = generator
 
-        super(cmakebuilder, self).__init__(name, modules_dir)
+        super(cmakebuilder, self).__init__(name, modules_dir, build_dir, install_dir)
 
     def clean(self):
         if os.path.exists(self.build_path):
@@ -91,9 +87,9 @@ class cmakebuilder(builder):
         subprocess.check_call(cmd, env=self.env)
 
 class acbuilder(builder):
-    def __init__(self, name, modules_dir, make_verbose=False):
+    def __init__(self, name, modules_dir, build_dir, install_dir, make_verbose=False):
         self.make_verbose = make_verbose
-        super(acbuilder, self).__init__(name, modules_dir)
+        super(acbuilder, self).__init__(name, modules_dir, build_dir, install_dir)
 
     def clean(self):
         if os.path.exists(self.build_path):
@@ -102,15 +98,19 @@ class acbuilder(builder):
 
     def prepare(self):
         os.chdir(self.src_path)
-        cmd = ["./build-tools/autogen.sh"]
+        cmd = ["./build-tools/autogen.sh", "-f"]
         logger.info("preparing {}: {}".format(self.name, " ".join(cmd)))
         subprocess.check_call(cmd, env=self.env)
 
         self.configure()
 
     def configure(self):
-        os.mkdir(self.build_path)
+        try:
+            os.mkdir(self.build_path)
+        except OSError:
+            pass
         os.chdir(self.build_path)
+
         cmd = [self.src_path + "/configure",
                "--prefix=" + self.install_path]
         logger.info("configuring {}: {}".format(self.name, " ".join(cmd)))
@@ -135,6 +135,9 @@ class mapbuild(object):
 
         logger.info("{} {}".format(commands, _map_modules + _dep_modules))
 
+        build_dir = os.path.realpath(os.path.join(args.map_path, '..', 'build'))
+        install_dir = os.path.join(build_dir, 'install')
+
         # build dep modules
         modules_dir = os.path.join(os.path.realpath(args.map_path), "../3rdparty")
         for name in _dep_modules:
@@ -142,11 +145,11 @@ class mapbuild(object):
                 if name == 'dwpal':
                     modules_dir = os.path.join(os.path.realpath(args.map_path), "../hostap")
 
-                builder = cmakebuilder(name, modules_dir, args.native, args.cmake_verbose,
-                    args.make_verbose, args.cmake_flags, args.generator)
+                builder = cmakebuilder(name, modules_dir, build_dir, install_dir, args.cmake_verbose, args.make_verbose,
+                    args.cmake_flags, args.generator)
 
             if name == 'safeclib':
-                builder = acbuilder('safeclib', modules_dir, args.make_verbose)
+                builder = acbuilder('safeclib', modules_dir, build_dir, install_dir, args.make_verbose)
 
             self.run_command(builder, commands)
 
@@ -156,8 +159,8 @@ class mapbuild(object):
         map_cmake_flags = ["STANDALONE=ON"] + args.cmake_flags
         if not args.native: map_cmake_flags += ["CMAKE_TOOLCHAIN_FILE=external_toolchain.cmake"]
         for name in _map_modules:
-            builder = cmakebuilder(name, modules_dir, args.native, args.cmake_verbose,
-                args.make_verbose, map_cmake_flags, args.generator)
+            builder = cmakebuilder(name, modules_dir, build_dir, install_dir, args.cmake_verbose, args.make_verbose,
+                map_cmake_flags, args.generator)
 
             self.run_command(builder, commands)
 
